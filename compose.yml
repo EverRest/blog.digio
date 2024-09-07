@@ -1,0 +1,59 @@
+networks:
+  wordpress-network:
+    driver: bridge
+
+services:
+  init:
+    image: busybox
+    volumes:
+      - ./init.sh:/init.sh
+    entrypoint: ["sh", "/init.sh"]
+
+  db:
+    image: bitnami/mariadb:latest
+    networks:
+      - wordpress-network
+    volumes:
+      - ./mariadb-persistence:/bitnami/mariadb
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - MARIADB_USER=bn_wordpress
+      - MARIADB_PASSWORD=bitnami
+      - MARIADB_DATABASE=bitnami_wordpress
+    expose:
+      - 3306
+    depends_on:
+      - init
+
+  wordpress:
+    image: bitnami/wordpress-nginx:latest
+    networks:
+      - wordpress-network
+    volumes:
+      - ./wordpress-persistence:/bitnami/wordpress
+      - ./nginx:/bitnami/nginx
+      - ./nginx/conf/server_blocks:/opt/bitnami/nginx/conf/server_blocks
+    restart: always
+    environment:
+      - WORDPRESS_ENABLE_HTTPS=no
+      - ALLOW_EMPTY_PASSWORD=yes
+      - WORDPRESS_DATABASE_USER=bn_wordpress
+      - WORDPRESS_DATABASE_PASSWORD=bitnami
+      - WORDPRESS_DATABASE_NAME=bitnami_wordpress
+      - WORDPRESS_DATABASE_HOST=db
+      - WORDPRESS_USERNAME=admin
+      - WORDPRESS_PASSWORD=admin
+      - WORDPRESS_EMAIL=admin@gmail.com
+      - WORDPRESS_FIRST_NAME=Admin
+      - WORDPRESS_LAST_NAME=Admin
+      - WORDPRESS_HTACCESS_OVERRIDE_NONE=yes
+      - WORDPRESS_SKIP_INSTALL=no
+      - WORDPRESS_TABLE_PREFIX=wp_
+      - WORDPRESS_BLOG_NAME=My Blog
+    ports:
+      - "3002:8080"
+      - "8443:8443"
+    depends_on:
+      - init
+      - db
